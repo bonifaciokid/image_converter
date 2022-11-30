@@ -1,6 +1,7 @@
 """
-Converts image to specific file format.
-Convert size is optional.
+- Converts image to specific file format.
+- Convert size is optional.
+- Converted image file name is added with converted size
 """
 import json
 from dataclasses import dataclass
@@ -11,8 +12,9 @@ class ConvertImage:
     """image converter"""
     file_path: str
     convert_format: str
-    convert_sizes: list
+    convert_sizes: list = []
     image_destination: str = ''
+
 
     def image_file_name(self, width, height):
         """changes file extension for new image extension"""
@@ -20,12 +22,13 @@ class ConvertImage:
         split_file_name = file_name.split('.')
         join_name = '.'.join(split_file_name[:-1])
         if width:
-            file_name = join_name + '-' + str(width) + 'x' + str(height) + '.' + self.convert_format
+            file_name = f"{join_name}-{width}x{height}.{self.convert_format}"
             return file_name
 
-        file_name = join_name + '.' + self.convert_format
+        file_name = f"{join_name}.{self.convert_format}"
         print(f"filename: {file_name}")
         return file_name
+
 
     def saved_file_destination(self, file_name):
         """build saved file destination"""
@@ -37,8 +40,25 @@ class ConvertImage:
         print(f"save path: {destination}")
         return destination
 
+
     def resize_image(self, image):
-        """resize image"""
+        """
+        - Resize image
+        - Image resized by its longest side. The shortest side is based
+          on the percentage of the resized image.
+           - math
+                - ex. original size = width, height = 1260 x 720
+                - convert_sizes = [200]
+                - if width > height
+                    - width = 200
+                    - height = (200 / 1260) x 100
+                    - height = 15.87%
+                    - height = 15.87% x 720 or 0.1587 x 720
+                    - height = 114.264  # for simplification we will round of the result
+                    - height = 114
+                    widht, height = 200 x 114
+                - if width < heigh just reverse the process
+        """
         orig_width, orig_height = image.size
         print(orig_width, orig_height)
         image_resizes = self.convert_sizes
@@ -56,8 +76,9 @@ class ConvertImage:
                 file_name_with_size = self.image_file_name(resize_width, size)
 
             print(file_name_with_size)
-            new_file_dest_with_size = self.saved_file_destination(file_name_with_size)
-            self.save_image(resized_image, new_file_dest_with_size)
+            save_converted_image = self.saved_file_destination(file_name_with_size)
+            self.save_image(resized_image, save_converted_image)
+
 
     def save_image(self, image, save_path):
         """save image"""
@@ -71,17 +92,19 @@ class ConvertImage:
         print(" ")
         return json.dumps(message)
 
+
     def convert_image(self):
         """convert image"""
         print("open image...")
         image = Image.open(self.file_path).convert("RGB")
-        if not self.convert_sizes:
-            print("convert image to {}...".format(self.convert_format))
-            file_name = self.image_file_name('', '')
-            save_path = self.saved_file_destination(file_name)
-            return self.save_image(image, save_path)
+        if self.convert_sizes:
+            return self.resize_image(image)
 
-        return self.resize_image(image)
+        print("convert image to {}...".format(self.convert_format))
+        file_name = self.image_file_name('', '')
+        save_path = self.saved_file_destination(file_name)
+        return self.save_image(image, save_path)
+
 
     def check_input_format(self):
         """check if file format is valid"""
@@ -91,7 +114,7 @@ class ConvertImage:
 
         message = {}
         message["success"] = True
-        message["message"] = "Please input a valid attribute format: webp, jpg, jpeg, png."
+        message["message"] = "Please input a valid format to convert; webp, jpg, jpeg, png."
         return json.dumps(message)
 
 
@@ -103,10 +126,10 @@ def main():
     file_dest = save converted image file destination
     """
 
-    image_path = '/home/ojieyam/Desktop/android.jpg'
+    image_path = '/path/to/image/image.jpg'
     image_format = 'jpeg'
     convert_sizes = [200, 400]
-    save_path = '/home/ojieyam/Desktop'
+    save_path = '/save/path/'
     convert = ConvertImage(image_path, image_format, convert_sizes, save_path)
     convert.check_input_format()
 
